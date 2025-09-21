@@ -65,7 +65,7 @@ class Escalator(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.number} ({self.station})"
+        return f"Эскалатор № {self.number} ({self.station})"
     
 
 class Camera(models.Model):
@@ -116,20 +116,20 @@ class CameraEscalator(models.Model): # Переходная модель для 
     station = models.ForeignKey('Station', on_delete=models.CASCADE)
 
     class Meta:
+        verbose_name = 'Связь камеры и эскалатора'
+        verbose_name_plural = 'Связи камер и эскалаторов'
+
         constraints = [
             # Все эскалаторы, связанные с одной камерой, должны быть на одной станции
-            models.UniqueConstraint(
-                fields=['camera', 'station'],
-                name='unique_station_per_camera',
-            ),
             models.UniqueConstraint(
                 fields=['camera', 'escalator'],
                 name='unique_camera_escalator_pair',
             )
         ]
 
-    class Meta:
-        verbose_name = 'Связь камеры и эскалатора'
     def clean(self):
         if self.escalator.station != self.station:
             raise ValidationError('Эскалатор и камера должны быть на одной станции.')
+        
+    def __str__(self):
+        return f"Связь {self.camera}"
