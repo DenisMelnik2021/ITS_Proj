@@ -71,21 +71,20 @@ class Escalator(models.Model):
 class Camera(models.Model):
     id = models.AutoField(primary_key=True)
 
-    # Поля для хранения информации о камере (связь с несколькими эскалаторами)
-    escalators = models.ManyToManyField(
-        'Escalator',
-        verbose_name="Эскалаторы",
+    station = models.ForeignKey(
+        'Station',
+        on_delete=models.CASCADE,
+        verbose_name="Станция",
         related_name='cameras',
-        through="CameraEscalator", # Переходная модель для связи
     )
 
-    cam_status_choices = [
+    status_choices = [
         ("working", "Работает"),
         ("notWorking", "Не работает"),
         ("mainTenance", "В обслуживании"),
     ]
     status = models.CharField(
-        choices=cam_status_choices,
+        choices=status_choices,
         max_length=25,
         default="working",
     )
@@ -108,12 +107,11 @@ class Camera(models.Model):
         ]
 
     def __str__(self):
-        return f"Камера {self.id} ({', '.join(str(e) for e in self.escalators.all())})"
+        return f"Камера {self.id} ({self.station})"
 
 class CameraEscalator(models.Model): # Переходная модель для связи
     camera = models.ForeignKey('Camera', on_delete=models.CASCADE)
     escalator = models.ForeignKey('Escalator', on_delete=models.CASCADE)
-    station = models.ForeignKey('Station', on_delete=models.CASCADE)
 
     class Meta:
         verbose_name = 'Связь камеры и эскалатора'
@@ -128,8 +126,8 @@ class CameraEscalator(models.Model): # Переходная модель для 
         ]
 
     def clean(self):
-        if self.escalator.station != self.station:
+        if self.escalator.station != self.camera.station:
             raise ValidationError('Эскалатор и камера должны быть на одной станции.')
         
     def __str__(self):
-        return f"Связь {self.camera}"
+        return f"{self.camera} → {self.escalator}"

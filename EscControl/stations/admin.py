@@ -2,11 +2,12 @@ from django.contrib import admin
 from stations import models
 
 # Inline для связи между эскалатором и камерой
-class CameraInline(admin.TabularInline):  # или admin.StackedInline
+class CameraInline(admin.TabularInline):
     model = models.CameraEscalator
-    extra = 1  # Количество пустых форм для добавления новых связей
+    extra = 1
     verbose_name_plural = "Эскалаторы"
     verbose_name = "Связь камеры и эскалатора"
+    autocomplete_fields = ["escalator"]  # Для удобства выбора
 
 
 # Inline для связи между станцией и эскалаторами
@@ -37,18 +38,33 @@ class EscalatorAdmin(admin.ModelAdmin):
 # Админ для модели Camera
 @admin.register(models.Camera)
 class CameraAdmin(admin.ModelAdmin):
-    list_display = ("id", "status", "installed_at", "description")
-    readonly_fields = ("installed_at",)
-    search_fields = ("description",)
-    inlines = [CameraInline]  # Встраиваем камеры
-    list_filter = ("status",)
-    
-    
+    list_display = ("id", "station", "status", "installed_at", "description")
+    search_fields = ("station__name", "description")
+    inlines = [CameraInline]  # Встраиваем связи с эскалаторами
+    list_filter = ("status", "station")  # Фильтр по статусу и станции
 
 
 # Админ для модели CameraEscalator
 @admin.register(models.CameraEscalator)
 class CameraEscalatorAdmin(admin.ModelAdmin):
-    list_display = ("id", "camera", "escalator", "station")
-    search_fields = ("camera__id", "escalator__id", "station__name")
-    
+    list_display = ("camera", "escalator")
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "escalator":
+            # Если выбрана камера — фильтруем эскалаторы по её станции
+            camera_id = request.GET.get("camera")
+            if camera_id:
+                try:
+                    camera = models.Camera.objects.get(id=camera_id)
+                    kwargs["queryset"] = models.Escalator.objects.filter(station=camera.station)
+                except models.Camera.DoesNotExist:
+                    pass
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def save_model(self, request, obj, form, change):
+        try:
+            obj.full_clean()
+            obj.save()
+        except Exception as e:
+            self.message_user(request, f"Ошибка: {e}", level="error")
+            raise
