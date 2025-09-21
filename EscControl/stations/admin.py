@@ -1,3 +1,6 @@
 from django.contrib import admin
+from stations import models
 
-# Register your models here.
+admin.site.register(models.station)
+admin.site.register(models.escalator)
+
