@@ -2,12 +2,11 @@ from django.contrib import admin
 from stations import models
 
 # Inline для связи между эскалатором и камерой
-class CameraInline(admin.TabularInline):
+class CameraInline(admin.TabularInline):  # или admin.StackedInline
     model = models.CameraEscalator
-    extra = 0  # Не добавляем пустые формы
-    verbose_name_plural = "Камеры"
+    extra = 1  # Количество пустых форм для добавления новых связей
+    verbose_name_plural = "Эскалаторы"
     verbose_name = "Связь камеры и эскалатора"
-    fields = ("camera", "station")  # Отображаемые поля
 
 
 # Inline для связи между станцией и эскалаторами
@@ -33,7 +32,6 @@ class EscalatorAdmin(admin.ModelAdmin):
     list_display = ("id", "number", "station", "status")
     list_filter = ("status", "station")
     search_fields = ("number", "station__name")
-    inlines = [CameraInline]  # Встраиваем камеры
 
 
 # Админ для модели Camera
@@ -42,6 +40,10 @@ class CameraAdmin(admin.ModelAdmin):
     list_display = ("id", "status", "installed_at", "description")
     readonly_fields = ("installed_at",)
     search_fields = ("description",)
+    inlines = [CameraInline]  # Встраиваем камеры
+    list_filter = ("status",)
+    
+    
 
 
 # Админ для модели CameraEscalator
@@ -49,3 +51,4 @@ class CameraAdmin(admin.ModelAdmin):
 class CameraEscalatorAdmin(admin.ModelAdmin):
     list_display = ("id", "camera", "escalator", "station")
     search_fields = ("camera__id", "escalator__id", "station__name")
+    
