@@ -12,3 +12,4 @@ __pycache__/
 /.idea/vcs.xml
 /.idea/workspace.xml
 /.env
+/EscControl/db.sqlite3
