@@ -36,15 +36,19 @@ class Incident(models.Model):
         validators=[MinValueValidator(0), MaxValueValidator(1)]
     )
 
-    statusChoices = [
-        ('Open', 'Открыто'),
-        ('Closed', 'Закрыт'),
-        ('inprogress', 'В работе'),
+    STATUS_NEW = "new"
+    STATUS_IN_PROGRESS = "in_progress"
+    STATUS_CLOSED = "closed"
+    
+    STATUS_CHOICES = [
+        (STATUS_NEW, "новый"),
+        (STATUS_IN_PROGRESS, "в обработке"),
+        (STATUS_CLOSED, "закрыт"),
     ]
     status = models.CharField(
-        choices=statusChoices,
+        choices=STATUS_CHOICES,
         max_length=25,
-        default='Open',
+        default=STATUS_NEW,
     )
 
     # screenshot = models.ImageField() - дописать импорт Pillow и добавить поле

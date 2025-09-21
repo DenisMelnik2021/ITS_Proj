@@ -46,15 +46,19 @@ class Escalator(models.Model):
         verbose_name='Номер эскалатора',
     )
 
-    status_choices = [
-        ("working", "Работает"),
-        ("notWorking", "Не работает"),
-        ("mainTenance", "В обслуживании"),
+    STATUS_WORKING = "working"
+    STATUS_NOT_WORKING = "not_working"
+    STATUS_UNDER_MAINTENANCE = "under_maintenance"
+
+    STATUS_CHOICES = [
+        (STATUS_WORKING, "работает"),
+        (STATUS_NOT_WORKING, "не работает"),
+        (STATUS_UNDER_MAINTENANCE, "обслуживается"),
     ]
     status = models.CharField(
-        choices=status_choices,
+        choices=STATUS_CHOICES,
         max_length=25,
-        default="working",
+        default=STATUS_WORKING,
     )
 
     class Meta:
@@ -78,15 +82,19 @@ class Camera(models.Model):
         related_name='cameras',
     )
 
-    status_choices = [
-        ("working", "Работает"),
-        ("notWorking", "Не работает"),
-        ("mainTenance", "В обслуживании"),
+    STATUS_ACTIVE = "active"
+    STATUS_INACTIVE = "inactive"
+    STATUS_IN_MAINTENANCE = "in_maintenance"
+    
+    STATUS_CHOICES = [
+        (STATUS_ACTIVE, "активна"),
+        (STATUS_INACTIVE, "неактивна"),
+        (STATUS_IN_MAINTENANCE, "в обслуживании"),
     ]
     status = models.CharField(
-        choices=status_choices,
+        choices=STATUS_CHOICES,
         max_length=25,
-        default="working",
+        default=STATUS_ACTIVE,
     )
 
     installed_at = models.DateTimeField(
