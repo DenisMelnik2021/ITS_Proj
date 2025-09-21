@@ -48,8 +48,8 @@ class Escalator(models.Model):
 
     status_choices = [
         ("working", "Работает"),
-        ("not_working", "Не работает"),
-        ("maintenance", "В обслуживании"),
+        ("notWorking", "Не работает"),
+        ("mainTenance", "В обслуживании"),
     ]
     status = models.CharField(
         choices=status_choices,
@@ -81,8 +81,8 @@ class Camera(models.Model):
 
     cam_status_choices = [
         ("working", "Работает"),
-        ("not_working", "Не работает"),
-        ("maintenance", "В обслуживании"),
+        ("notWorking", "Не работает"),
+        ("mainTenance", "В обслуживании"),
     ]
     status = models.CharField(
         choices=cam_status_choices,
