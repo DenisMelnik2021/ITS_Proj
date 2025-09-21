@@ -95,10 +95,15 @@ class Camera(models.Model):
         verbose_name='Дата установки',
     )
 
+    description = models.TextField(
+        verbose_name='Описание камеры',
+        null=True,
+    )
+
     def __str__(self):
         return f"Камера {self.id} ({', '.join(str(e) for e in self.escalators.all())})"
 
-class CameraEscalator(models.Model):
+class CameraEscalator(models.Model): # Переходная модель для связи
     camera = models.ForeignKey('Camera', on_delete=models.CASCADE)
     escalator = models.ForeignKey('Escalator', on_delete=models.CASCADE)
     station = models.ForeignKey('Station', on_delete=models.CASCADE)
