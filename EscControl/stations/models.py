@@ -100,6 +100,13 @@ class Camera(models.Model):
         null=True,
     )
 
+    class Meta:
+        verbose_name = 'Камера'
+        verbose_name_plural = 'Камеры'
+        constraints = [
+            models.UniqueConstraint(fields=['id'], name='unique_camera_id')
+        ]
+
     def __str__(self):
         return f"Камера {self.id} ({', '.join(str(e) for e in self.escalators.all())})"
 
@@ -121,6 +128,8 @@ class CameraEscalator(models.Model): # Переходная модель для 
             )
         ]
 
+    class Meta:
+        verbose_name = 'Связь камеры и эскалатора'
     def clean(self):
         if self.escalator.station != self.station:
             raise ValidationError('Эскалатор и камера должны быть на одной станции.')
