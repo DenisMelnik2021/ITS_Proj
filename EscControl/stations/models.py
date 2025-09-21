@@ -1,7 +1,8 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 
 # Create your models here.
-class station(models.Model):
+class Station(models.Model):
     id = models.AutoField(primary_key=True)
 
     name = models.CharField(
@@ -31,11 +32,11 @@ class station(models.Model):
         return f"{self.name} ({self.line})"
     
 
-class escalator(models.Model):
+class Escalator(models.Model):
     id = models.AutoField(primary_key=True)
 
     station = models.ForeignKey(
-        'station',
+        'Station',
         on_delete=models.CASCADE,
         verbose_name="Станция",
         db_index=True,
@@ -66,3 +67,55 @@ class escalator(models.Model):
     def __str__(self):
         return f"{self.number} ({self.station})"
     
+
+class Camera(models.Model):
+    id = models.AutoField(primary_key=True)
+
+    # Поля для хранения информации о камере (связь с несколькими эскалаторами)
+    escalators = models.ManyToManyField(
+        'Escalator',
+        verbose_name="Эскалаторы",
+        related_name='cameras',
+        through="CameraEscalator", # Переходная модель для связи
+    )
+
+    cam_status_choices = [
+        ("working", "Работает"),
+        ("not_working", "Не работает"),
+        ("maintenance", "В обслуживании"),
+    ]
+    status = models.CharField(
+        choices=cam_status_choices,
+        max_length=25,
+        default="working",
+    )
+
+    installed_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата установки',
+    )
+
+    def __str__(self):
+        return f"Камера {self.id} ({', '.join(str(e) for e in self.escalators.all())})"
+
+class CameraEscalator(models.Model):
+    camera = models.ForeignKey('Camera', on_delete=models.CASCADE)
+    escalator = models.ForeignKey('Escalator', on_delete=models.CASCADE)
+    station = models.ForeignKey('Station', on_delete=models.CASCADE)
+
+    class Meta:
+        constraints = [
+            # Все эскалаторы, связанные с одной камерой, должны быть на одной станции
+            models.UniqueConstraint(
+                fields=['camera', 'station'],
+                name='unique_station_per_camera',
+            ),
+            models.UniqueConstraint(
+                fields=['camera', 'escalator'],
+                name='unique_camera_escalator_pair',
+            )
+        ]
+
+    def clean(self):
+        if self.escalator.station != self.station:
+            raise ValidationError('Эскалатор и камера должны быть на одной станции.')
