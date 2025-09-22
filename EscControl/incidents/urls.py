@@ -1,11 +1,9 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import FrontendIncidentList, IncidentViewSet
-
-router = DefaultRouter()
-router.register(r'incidents', IncidentViewSet, basename='incidents')
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path("frontend/incidents/", FrontendIncidentList.as_view(), name="frontend-incidents"),
-    path("", include(router.urls)),
+    path('', views.dashboard, name='dashboard'),
+    path('stations/', views.stations, name='stations'),
+    path('incidents/', views.incidents, name='incidents'),
+    path('analytics/', views.analytics, name='analytics'),
 ]

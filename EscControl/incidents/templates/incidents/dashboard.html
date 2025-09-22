@@ -1,0 +1,39 @@
+{% extends 'incidents/base.html' %}
+
+{% block title %}Дашборд | EscControl{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        <h2>Общая статистика</h2>
+        <ul>
+            <li>Всего эскалаторов: {{ total_escalators }}</li>
+            <li>Рабочих эскалаторов: {{ working_escalators }}</li>
+            <li>Инцидентов всего: {{ incidents_count }}</li>
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h2>Последние инциденты</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Тип инцидента</th>
+                    <th>Станция</th>
+                    <th>Эскалатор</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for incident in recent_incidents %}
+                <tr>
+                    <td>{{ incident.occurred_at|date:'d.m.Y H:i' }}</td>
+                    <td>{{ incident.incident_type }}</td>
+                    <td>{{ incident.escalator.station }}</td>
+                    <td>{{ incident.escalator.number }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

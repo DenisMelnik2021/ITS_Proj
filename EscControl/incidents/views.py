@@ -1,29 +1,39 @@
-from rest_framework import generics, status, viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from .serializers import FrontendIncidentSerializer, YoloIncidentReportSerializer
+from django.shortcuts import render
 from .models import Incident
-from django.utils.dateparse import parse_datetime
+from stations.models import Station, Escalator
 
+def dashboard(request):
+    """Основная страница с информацией"""
+    total_escalators = Escalator.objects.count()
+    working_escalators = Escalator.objects.filter(status='working').count()
+    incidents_count = Incident.objects.count()
+    recent_incidents = Incident.objects.order_by('-created_at')[:5]
+    
+    context = {
+        'total_escalators': total_escalators,
+        'working_escalators': working_escalators,
+        'incidents_count': incidents_count,
+        'recent_incidents': recent_incidents,
+    }
+    return render(request, 'incidents/dashboard.html', context)
 
-# Create your views here.
-class FrontendIncidentList(generics.ListCreateAPIView):
-    queryset = Incident.objects.select_related('incident_type', 'escalator').order_by('-created_at')
-    serializer_class = FrontendIncidentSerializer
+def stations(request):
+    """Страница со списком станций и эскалаторами"""
+    stations_with_escalators = Station.objects.prefetch_related('escalators')
+    context = {
+        'stations': stations_with_escalators,
+    }
+    return render(request, 'incidents/stations.html', context)
 
-class IncidentViewSet(viewsets.GenericViewSet):
-    queryset = Incident.objects.all()
+def incidents(request):
+    """Страница с инцидентами"""
+    incidents = Incident.objects.select_related('escalator__station', 'incident_type').order_by('-created_at')
+    context = {
+        'incidents': incidents,
+    }
+    return render(request, 'incidents/incidents.html', context)
 
-    @action(methods=['post'], detail=False)
-    def report(self, request):
-        ser = YoloIncidentReportSerializer(data=request.data)
-        ser.is_valid(raise_exception=True)
-        obj = ser.save()
-
-        ts = ser.initial_data.get('ts')
-        if ts:
-            dt = parse_datetime(ts)
-            if dt:
-                obj.created_at = dt
-                obj.save(update_fields=['created_at'])
-        return Response(FrontendIncidentSerializer(obj).data, status=status.HTTP_201_CREATED)
+def analytics(request):
+    """Страница с аналитическими отчётами"""
+    context = {}
+    return render(request, 'incidents/analytics.html', context)

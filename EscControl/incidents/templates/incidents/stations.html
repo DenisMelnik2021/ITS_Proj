@@ -1,0 +1,26 @@
+{% extends 'incidents/base.html' %}
+
+{% block title %}Станции | EscControl{% endblock %}
+
+{% block content %}
+<h1>Список станций</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Имя станции</th>
+            <th>Адрес</th>
+            <th>Количество эскалаторов</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for station in stations %}
+        <tr>
+            <td>{{ station.name }}</td>
+            <td>{{ station.address }}</td>
+            <td>{{ station.escalators.count }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
