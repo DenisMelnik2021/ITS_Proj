@@ -1,15 +1,14 @@
-# Игнорировать все папки __pycache__
+# Виртуальное окружение
+.venv/
+
+# Папки с кэшом
 __pycache__/
 
-# Игнорировать все скомпилированные Python-файлы
-*.pyc
-*.pyo
-/.idea/inspectionProfiles/profiles_settings.xml
-/.idea/misc.xml
-/.idea/modules.xml
-/.idea/inspectionProfiles/profiles_settings.xml
-/.idea/inspectionProfiles/Project_Default.xml
-/.idea/vcs.xml
-/.idea/workspace.xml
-/.env
-/EscControl/db.sqlite3
+# Логи
+*.log
+
+# База данных SQLite
+db.sqlite3
+
+# PyCharm
+.idea/
