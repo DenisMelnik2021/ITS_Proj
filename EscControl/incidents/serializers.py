@@ -2,10 +2,6 @@ from rest_framework import serializers
 from .models import *
 from stations.models import Escalator
 
-class FrontendIncidentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Incident
-        fields = ['id', 'incident_type', 'escalator', 'created_at', 'confidence', 'status', 'notes', 'screenshot']
 
 class YoloIncidentReportSerializer(serializers.ModelSerializer):
     incident_type = serializers.PrimaryKeyRelatedField(queryset=IncidentType.objects.all())
@@ -14,5 +10,21 @@ class YoloIncidentReportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Incident
-        fields = ['id', 'incident_type', 'escalator', 'confidence', 'status', 'screenshot', 'notes', 'created_at', 'ts']
+
+        fields = [
+            'id',
+            'incident_type',
+            'escalator',
+            'confidence',
+            'status',
+            'screenshot',
+            'notes',
+            'created_at',
+            'ts'
+        ]
+
         read_only_fields = ['id', 'created_at']
+
+    def create(self, validated_data):
+        validated_data.pop('ts', None)
+        return super().create(validated_data)
