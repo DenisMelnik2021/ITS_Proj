@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "incidents",
     "monitoring",
     "stations",
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
