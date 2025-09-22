@@ -1,3 +1,6 @@
+import os
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 
@@ -9,7 +12,7 @@ class IncidentType(models.Model):
         max_length=100,
     )
 
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Тип инцидента'
@@ -31,7 +34,7 @@ class Incident(models.Model):
         on_delete=models.CASCADE
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     confidence = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(1)]
     )
@@ -51,15 +54,22 @@ class Incident(models.Model):
         default=STATUS_NEW,
     )
 
-    # screenshot = models.ImageField() - дописать импорт Pillow и добавить поле
-    notes = models.TextField()
+    screenshot = models.ImageField(
+        upload_to="incident_screenshots/",
+    )
+
+    notes = models.TextField(blank=True)
 
     class Meta:
         verbose_name = 'Инцидент'
         verbose_name_plural = 'Инциденты'
-    
+
     def __str__(self):
         return f"{self.incident_type} ({self.created_at})"
 
-
+@receiver(post_delete, sender=Incident)
+def delete_screenshot(sender, instance, **kwargs):
+    if instance.screenshot:
+        if os.path.exists(instance.screenshot.path):
+            os.remove(instance.screenshot.path)
 

@@ -21,11 +21,15 @@ from rest_framework.authtoken.views import obtain_auth_token
 from django.conf import settings
 from django.conf.urls.static import static
 
+api_v1_patterns = [
+    path('auth/token/', obtain_auth_token, name='api_token_auth'),
+    path('', include('incidents.urls')),
+    path('', include('stations.urls'))
+]
+
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api-token-auth/", obtain_auth_token, name="api_token_auth"),  # Маршрут для получения токена
-    path("api-cam/", include("stations.urls")), 
-    path("api-inc/", include("incidents.urls")), 
+    path('api/', include((api_v1_patterns, 'api'), namespace="v1")) 
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
