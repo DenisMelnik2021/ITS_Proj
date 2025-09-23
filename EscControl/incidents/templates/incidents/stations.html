@@ -17,7 +17,7 @@
         {% for station in stations %}
         <tr>
             <td>{{ station.name }}</td>
-            <td>{{ station.address }}</td>
+            <td>{{ station.coordinates }}</td>
             <td>{{ station.escalators.count }}</td>
         </tr>
         {% endfor %}

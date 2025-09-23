@@ -40,6 +40,7 @@ class Escalator(models.Model):
         on_delete=models.CASCADE,
         verbose_name="Станция",
         db_index=True,
+        related_name='escalators'  # добавляем это
     )
 
     number = models.IntegerField(

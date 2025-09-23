@@ -18,7 +18,7 @@
     <tbody>
         {% for incident in incidents %}
         <tr>
-            <td>{{ incident.occurred_at|date:'d.m.Y H:i' }}</td>
+            <td>{{ incident.created_at|date:'d.m.Y H:i' }}</td>
             <td>{{ incident.incident_type }}</td>
             <td>{{ incident.escalator.station }}</td>
             <td>{{ incident.escalator.number }}</td>
