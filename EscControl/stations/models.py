@@ -5,6 +5,12 @@ from django.core.exceptions import ValidationError
 class Station(models.Model):
     id = models.AutoField(primary_key=True)
 
+    key_for_front = models.CharField(
+        null=True,
+        max_length=100,
+        verbose_name='Ключ',
+    )
+
     name = models.CharField(
         max_length=100,
         verbose_name='Название станции',

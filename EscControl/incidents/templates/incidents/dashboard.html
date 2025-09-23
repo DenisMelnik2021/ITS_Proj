@@ -1,39 +1,495 @@
 {% extends 'incidents/base.html' %}
+{% load static %}
 
-{% block title %}Дашборд | EscControl{% endblock %}
+{% block title %}Система мониторинга инцидентов | EscControl{% endblock %}
 
 {% block content %}
+<style>
+  .dashboard-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px;border-radius:8px;margin-bottom:30px}
+  .stats-card{background:#fff;border-radius:8px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,.1);text-align:center;margin-bottom:20px}
+  .stats-number{font-size:2.2rem;font-weight:700;color:#333}
+  .stats-label{color:#666;font-size:.9rem;margin-top:5px}
+  .critical{color:#dc3545}.warning{color:#ffc107}.success{color:#28a745}.info{color:#17a2b8}
+
+  .svg-map-container{width:100%;height:700px;border:2px solid #ddd;border-radius:8px;overflow:hidden;position:relative;background:#f8f9fa;cursor:grab;user-select:none}
+  .svg-map-container:active{cursor:grabbing}
+  .svg-map-container svg{width:100%;height:100%;display:block}
+
+  .station-search{position:absolute;top:10px;left:10px;z-index:20;max-width:300px}
+  .search-input{width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;background:rgba(255,255,255,.95)}
+  .search-results{background:#fff;border:1px solid #ddd;border-top:none;border-radius:0 0 4px 4px;max-height:240px;overflow-y:auto;display:none}
+  .search-result-item{padding:10px;cursor:pointer;border-bottom:1px solid #eee}
+  .search-result-item:hover{background:#f5f5f5}
+  .search-result-item:last-child{border-bottom:none}
+
+  .map-controls{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px;z-index:15}
+  .control-btn{width:40px;height:40px;background:rgba(255,255,255,.9);border:1px solid #ccc;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#333;transition:.2s}
+  .control-btn:hover{background:#fff;border-color:#007bff;transform:scale(1.05)}
+  .zoom-info{position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.8);color:#fff;padding:8px 12px;border-radius:4px;font-size:12px;z-index:10}
+
+  .svg-map-container svg [title="station"]{cursor:pointer;transition:.3s}
+  .svg-map-container svg [title="station"]:hover{opacity:.85;filter:brightness(1.12)}
+  .station-no-incidents{stroke:#28a745;stroke-width:2}
+  .station-few-incidents{stroke:#ffc107;stroke-width:3}
+  .station-many-incidents{stroke:#fd7e14;stroke-width:4}
+  .station-critical-incidents{stroke:#dc3545;stroke-width:5}
+
+  .station-tooltip{position:absolute;background:rgba(0,0,0,.95);color:#fff;padding:15px;border-radius:8px;font-size:13px;line-height:1.5;max-width:350px;z-index:1000;pointer-events:none;opacity:0;transition:opacity .2s;box-shadow:0 4px 20px rgba(0,0,0,.4)}
+  .station-tooltip.show{opacity:1}
+  .tooltip-header{font-weight:700;font-size:16px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #444}
+  .tooltip-content{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+  .tooltip-section h5{margin:0 0 8px 0;font-size:12px;text-transform:uppercase;color:#ccc}
+  .stat-row{display:flex;justify-content:space-between;margin-bottom:4px}
+
+  .station-detail-panel{position:fixed;right:-420px;top:0;width:420px;height:100vh;background:#fff;box-shadow:-2px 0 10px rgba(0,0,0,.1);transition:right .3s ease;z-index:2000;overflow-y:auto}
+  .station-detail-panel.open{right:0}
+  .panel-header{background:#343a40;color:#fff;padding:20px;position:relative}
+  .panel-close{position:absolute;right:15px;top:15px;background:none;border:none;color:#fff;font-size:24px;cursor:pointer}
+  .panel-content{padding:18px}
+  .section-title{font-size:14px;font-weight:700;color:#6c757d;text-transform:uppercase;margin:10px 0 8px}
+
+  .escalator-monitor{border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:10px}
+  .escalator-status{display:inline-block;padding:4px 8px;border-radius:4px;font-size:12px;font-weight:700;text-transform:uppercase}
+  .status-working{background:#d4edda;color:#155724}
+  .status-not_working{background:#f8d7da;color:#721c24}
+  .status-under_maintenance{background:#fff3cd;color:#856404}
+
+  .incident-item{border-left:3px solid #dc3545;background:#fff;border:1px solid #eee;border-left-color:#dc3545;border-radius:6px;padding:8px 10px;margin-bottom:8px}
+  .incident-item small{color:#6c757d}
+
+  @media (max-width:768px){
+    .station-detail-panel{width:100%;right:-100%}
+    .tooltip-content{grid-template-columns:1fr}
+    .station-search{position:relative;max-width:none;margin-bottom:10px}
+  }
+</style>
+
+<div class="dashboard-header">
+  <h1 class="mb-2">Система мониторинга и выявления инцидентов на эскалаторах Московского Метрополитена</h1>
+</div>
+
 <div class="row">
-    <div class="col-md-6">
-        <h2>Общая статистика</h2>
-        <ul>
-            <li>Всего эскалаторов: {{ total_escalators }}</li>
-            <li>Рабочих эскалаторов: {{ working_escalators }}</li>
-            <li>Инцидентов всего: {{ incidents_count }}</li>
-        </ul>
+  <div class="col-md-4">
+    <div class="stats-card">
+      <div class="stats-number success">{{ total_escalators }}</div>
+      <div class="stats-label">Всего эскалаторов</div>
     </div>
-    <div class="col-md-6">
-        <h2>Последние инциденты</h2>
-        <table class="table table-striped">
+  </div>
+  <div class="col-md-4">
+    <div class="stats-card">
+      <div class="stats-number info">{{ working_escalators }}</div>
+      <div class="stats-label">Работающих</div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="stats-card">
+      <div class="stats-number critical">{{ incidents_count }}</div>
+      <div class="stats-label">Всего инцидентов</div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header">
+        <h4>Схема метрополитена</h4>
+        <small class="text-muted">Кликните на станцию для просмотра эскалаторов и инцидентов</small>
+      </div>
+      <div class="card-body p-0">
+        <div class="svg-map-container" id="svgMapContainer">
+          <!-- Поиск станций -->
+          <div class="station-search">
+            <input type="text" class="search-input" id="stationSearch" placeholder="Поиск станции...">
+            <div class="search-results" id="searchResults"></div>
+          </div>
+
+          <!-- Управление картой -->
+          <div class="map-controls">
+            <button class="control-btn" id="zoomIn" title="Увеличить">+</button>
+            <button class="control-btn" id="zoomOut" title="Уменьшить">−</button>
+            <button class="control-btn" id="resetZoom" title="Сбросить">⌂</button>
+          </div>
+
+          <div class="zoom-info" id="zoomInfo">Масштаб: 100%</div>
+        </div>
+
+        <!-- Всплывающая подсказка -->
+        <div class="station-tooltip" id="stationTooltip">
+          <div class="tooltip-header"></div>
+          <div class="tooltip-content">
+            <div class="tooltip-section">
+              <h5>Эскалаторы</h5>
+              <div class="escalator-stats"></div>
+            </div>
+            <div class="tooltip-section">
+              <h5>Инциденты</h5>
+              <div class="incident-stats"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>    
+</div>
+
+<!-- Детальная панель станции -->
+<div class="station-detail-panel" id="stationDetailPanel">
+  <div class="panel-header">
+    <h3 id="panelStationName">Выберите станцию</h3>
+    <button class="panel-close" id="panelClose">&times;</button>
+  </div>
+  <div class="panel-content">
+    <div class="section-title">Эскалаторы</div>
+    <div id="escalatorMonitors"></div>
+
+    <div class="section-title">Инциденты на станции</div>
+    <div id="stationIncidents"></div>
+  </div>
+</div>
+
+<!-- Последние инциденты из БД -->
+<div class="row mt-4">
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-header"><h4>Последние инциденты</h4></div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped">
             <thead>
-                <tr>
-                    <th>Время</th>
-                    <th>Тип инцидента</th>
-                    <th>Станция</th>
-                    <th>Эскалатор</th>
-                </tr>
+              <tr>
+                <th>Время</th>
+                <th>Тип</th>
+                <th>Станция</th>
+                <th>Эскалатор</th>
+                <th>Статус эскалатора</th>
+              </tr>
             </thead>
             <tbody>
-                {% for incident in recent_incidents %}
-                <tr>
-                    <td>{{ incident.created_at|date:'d.m.Y H:i' }}</td>
-                    <td>{{ incident.incident_type }}</td>
-                    <td>{{ incident.escalator.station }}</td>
-                    <td>{{ incident.escalator.number }}</td>
-                </tr>
-                {% endfor %}
+              {% for incident in recent_incidents %}
+              <tr>
+                <td>{{ incident.created_at|date:'d.m.Y H:i' }}</td>
+                <td><span class="badge badge-danger">{{ incident.incident_type }}</span></td>
+                <td>{{ incident.escalator.station.name }}</td>
+                <td>№{{ incident.escalator.number }}</td>
+                <td>
+                  <span class="escalator-status status-{{ incident.escalator.status }}">
+                    {% if incident.escalator.status == 'working' %}Работает
+                    {% elif incident.escalator.status == 'not_working' %}Не работает
+                    {% else %}На обслуживании{% endif %}
+                  </span>
+                </td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5" class="text-muted">Нет данных</td></tr>
+              {% endfor %}
             </tbody>
-        </table>
+          </table>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
+
+<script>
+// Данные станций из Django (включают recent_incidents + список эскалаторов со статусами)
+const stationsData = {{ stations_data|safe }};
+
+class MetroMonitoringSystem {
+  constructor(containerId, svgPath){
+    this.container=document.getElementById(containerId);
+    this.svgPath=svgPath;
+    this.scale=1;this.translateX=0;this.translateY=0;this.isDragging=false;this.lastX=0;this.lastY=0;
+    this.minScale=0.1;this.maxScale=5;this.scaleStep=0.2;this.touches=[];this.lastTouchDistance=0;
+    this.tooltip=document.getElementById('stationTooltip');
+    this.detailPanel=document.getElementById('stationDetailPanel');
+    this.selectedStation=null;
+    this.init();
+  }
+
+  async init(){
+    try{
+      await this.loadSVG();
+      this.setupEventListeners();
+      this.setupStationEvents();
+      this.setupSearch();
+      this.updateTransform();
+    }catch(e){
+      console.error('Ошибка инициализации системы:',e);
+      this.container.innerHTML='<p style="text-align:center;padding:50px;color:#666;">Ошибка загрузки системы мониторинга</p>';
+    }
+  }
+
+  async loadSVG(){
+    const resp=await fetch(this.svgPath);
+    if(!resp.ok) throw new Error('HTTP '+resp.status);
+    const svgText=await resp.text();
+    const wrap=document.createElement('div');wrap.innerHTML=svgText;
+    const svg=wrap.querySelector('svg');if(!svg) throw new Error('SVG не найден');
+    if(!svg.getAttribute('viewBox')){
+      const w=svg.getAttribute('width')||'800';const h=svg.getAttribute('height')||'600';
+      svg.setAttribute('viewBox',`0 0 ${w} ${h}`);
+    }
+    svg.removeAttribute('width');svg.removeAttribute('height');
+    svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+
+    const controls=this.container.querySelector('.map-controls');
+    const search=this.container.querySelector('.station-search');
+    const info=this.container.querySelector('.zoom-info');
+    this.container.innerHTML='';
+    this.container.appendChild(svg);
+    this.container.appendChild(search);
+    this.container.appendChild(controls);
+    this.container.appendChild(info);
+    this.svg=svg;
+    this.applyStationStyles();
+  }
+
+  applyStationStyles(){
+    const sts=this.svg.querySelectorAll('[title="station"]');
+    sts.forEach(el=>{
+      const d=this.findStationData(el);
+      if(d){
+        const cnt=d.recent_incidents.length;
+        let cls='station-no-incidents';
+        if(cnt>=5) cls='station-critical-incidents';
+        else if(cnt>=3) cls='station-many-incidents';
+        else if(cnt>=1) cls='station-few-incidents';
+        el.classList.add(cls);
+      }
+    });
+  }
+
+  setupEventListeners(){
+    document.getElementById('zoomIn').addEventListener('click',()=>this.zoomIn());
+    document.getElementById('zoomOut').addEventListener('click',()=>this.zoomOut());
+    document.getElementById('resetZoom').addEventListener('click',()=>this.resetZoom());
+    this.container.addEventListener('wheel',(e)=>this.handleWheel(e),{passive:false});
+    this.container.addEventListener('mousedown',(e)=>this.handleMouseDown(e));
+    document.addEventListener('mousemove',(e)=>this.handleMouseMove(e));
+    document.addEventListener('mouseup',()=>this.handleMouseUp());
+    this.container.addEventListener('touchstart',(e)=>this.handleTouchStart(e),{passive:false});
+    this.container.addEventListener('touchmove',(e)=>this.handleTouchMove(e),{passive:false});
+    this.container.addEventListener('touchend',(e)=>this.handleTouchEnd(e));
+
+    document.getElementById('panelClose').addEventListener('click',()=>this.closeDetailPanel());
+  }
+
+  setupStationEvents(){
+    const sts=this.svg.querySelectorAll('[title="station"]');
+    sts.forEach(el=>{
+      el.addEventListener('mouseenter',(e)=>this.showStationTooltip(el,e));
+      el.addEventListener('mousemove',(e)=>this.updateTooltipPosition(e));
+      el.addEventListener('mouseleave',()=>this.hideTooltip());
+      el.addEventListener('click',(e)=>{e.stopPropagation();this.selectStation(el);});
+    });
+  }
+
+  setupSearch(){
+    const input=document.getElementById('stationSearch');
+    const results=document.getElementById('searchResults');
+
+    input.addEventListener('input',(e)=>{
+      const q=e.target.value.toLowerCase().trim();
+      if(q.length<2){results.style.display='none';return;}
+
+      const matches=Object.values(stationsData).filter(s=>
+        s.name.toLowerCase().includes(q) || s.line.toLowerCase().includes(q)
+      );
+
+      if(matches.length){
+        // только кликабельные строки, без кнопок
+        results.innerHTML=matches.map(s=>`
+          <div class="search-result-item" data-station-id="${s.id}">
+            <strong>${s.name}</strong><br>
+            <small class="text-muted">${s.line}</small>
+          </div>
+        `).join('');
+        results.style.display='block';
+
+        results.querySelectorAll('.search-result-item').forEach(it=>{
+          it.addEventListener('click',()=>{
+            const id=it.dataset.stationId;
+            this.focusOnStation(id);
+            input.value=it.querySelector('strong').textContent;
+            results.style.display='none';
+          });
+        });
+      }else{
+        results.innerHTML='<div class="search-result-item text-muted">Станции не найдены</div>';
+        results.style.display='block';
+      }
+    });
+
+    document.addEventListener('click',(e)=>{
+      if(!input.contains(e.target)&&!results.contains(e.target)){
+        results.style.display='none';
+      }
+    });
+  }
+
+  focusOnStation(id){
+    const st=this.svg.querySelector(`[id*="${id}"]`);
+    if(st){
+      this.selectStation(st);
+      const b=st.getBBox(), cx=b.x+b.width/2, cy=b.y+b.height/2;
+      this.scale=2;
+      this.translateX=(this.container.offsetWidth/2)-(cx*this.scale);
+      this.translateY=(this.container.offsetHeight/2)-(cy*this.scale);
+      this.updateTransform();
+    }
+  }
+
+  selectStation(el){
+    const d=this.findStationData(el);
+    if(d){
+      this.selectedStation=d;
+      this.openDetailPanel(d);
+      this.svg.querySelectorAll('[title="station"]').forEach(s=>s.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+  }
+
+  openDetailPanel(d){
+    document.getElementById('panelStationName').textContent=`${d.name} (${d.line})`;
+
+    // ЭСКАЛАТОРЫ
+    const box=document.getElementById('escalatorMonitors');
+    box.innerHTML='';
+    const label = s => s==='working' ? 'Работает' : s==='not_working' ? 'Не работает' : 'На обслуживании';
+
+    (d.escalators || []).forEach(e=>{
+      const uid=`esc-${e.id}`;
+      box.insertAdjacentHTML('beforeend', `
+        <div class="escalator-monitor" id="${uid}">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <strong>Эскалатор №${e.number}</strong>
+            <span class="escalator-status status-${e.status}">${label(e.status)}</span>
+          </div>
+          <div class="d-flex gap-2 align-items-center">
+            <small class="mr-2 text-muted">Изменить статус:</small>
+            <select class="form-control form-control-sm esc-status-select" data-escalator-id="${e.id}" style="max-width:220px;">
+              <option value="working" ${e.status==='working'?'selected':''}>Работает</option>
+              <option value="not_working" ${e.status==='not_working'?'selected':''}>Не работает</option>
+              <option value="under_maintenance" ${e.status==='under_maintenance'?'selected':''}>На обслуживании</option>
+            </select>
+            <button class="btn btn-sm btn-outline-secondary esc-save-btn" data-escalator-id="${e.id}">Сохранить</button>
+          </div>
+        </div>
+      `);
+    });
+
+    // обработчики сохранения статусов
+    box.querySelectorAll('.esc-save-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const id = btn.dataset.escalatorId;
+        const select = box.querySelector(`.esc-status-select[data-escalator-id="${id}"]`);
+        const newStatus = select.value;
+        try {
+          await this.updateEscalatorStatus(id, newStatus);
+          const card = document.getElementById(`esc-${id}`);
+          const badge = card.querySelector('.escalator-status');
+          badge.className = `escalator-status status-${newStatus}`;
+          badge.textContent = (newStatus==='working' ? 'Работает' : newStatus==='not_working' ? 'Не работает' : 'На обслуживании');
+        } catch (e) { console.error(e); }
+      });
+    });
+
+    // ИНЦИДЕНТЫ НА СТАНЦИИ (из d.recent_incidents)
+    const incBox=document.getElementById('stationIncidents');
+    incBox.innerHTML = (d.recent_incidents && d.recent_incidents.length)
+      ? d.recent_incidents.map(it => `
+          <div class="incident-item">
+            <div><strong>${it.type}</strong></div>
+            <small>${it.created_at} • эскалатор №${it.escalator_number}</small>
+          </div>
+        `).join('')
+      : '<div class="text-muted">Инциденты отсутствуют</div>';
+
+    this.detailPanel.classList.add('open');
+  }
+
+  closeDetailPanel(){
+    this.detailPanel.classList.remove('open');
+    this.svg.querySelectorAll('[title="station"]').forEach(s=>s.classList.remove('selected'));
+    this.selectedStation=null;
+  }
+
+  showStationTooltip(el,e){
+    const d=this.findStationData(el);
+    if(!d) return;
+    this.renderTooltip(d);
+    this.updateTooltipPosition(e);
+    this.tooltip.classList.add('show');
+  }
+
+  renderTooltip(d){
+    const header=this.tooltip.querySelector('.tooltip-header');
+    const esc=this.tooltip.querySelector('.escalator-stats');
+    const inc=this.tooltip.querySelector('.incident-stats');
+    header.textContent=`${d.name} (${d.line})`;
+    esc.innerHTML=`
+      <div class="stat-row"><span>Всего:</span><span>${d.total_escalators}</span></div>
+      <div class="stat-row"><span class="text-success">Работают:</span><span class="text-success">${d.working_escalators}</span></div>
+      <div class="stat-row"><span class="text-danger">Не работают:</span><span class="text-danger">${d.not_working_escalators}</span></div>
+      <div class="stat-row"><span class="text-warning">Обслуживание:</span><span class="text-warning">${d.maintenance_escalators}</span></div>`;
+    const cnt=d.recent_incidents.length;
+    inc.innerHTML=`
+      <div class="stat-row"><span>Всего инцидентов:</span><span>${cnt}</span></div>
+      ${d.recent_incidents.slice(0,2).map(it=>`<div style="font-size:11px;color:#ddd;margin-top:4px;">${it.created_at} — ${it.type}</div>`).join('')}
+    `;
+  }
+
+  findStationData(el){
+    for(const [dbId, s] of Object.entries(stationsData)){
+      if(dbId===el.id || el.id.includes(s.id)) return s;
+    }
+    return null;
+  }
+
+  getCsrfToken(){
+    const name='csrftoken';
+    const cookies=document.cookie?document.cookie.split('; '):[];
+    for(const c of cookies){ if(c.startsWith(name+'=')) return decodeURIComponent(c.split('=').slice(1).join('=')); }
+    const meta=document.querySelector('meta[name="csrf-token"]');
+    return meta?meta.content:'';
+  }
+
+  async updateEscalatorStatus(id, status){
+    const form = new URLSearchParams();
+    form.append('status', status);
+    const resp = await fetch(`/dashboard/escalators/${id}/set-status/`, {
+      method:'POST',
+      headers:{'X-CSRFToken': this.getCsrfToken(), 'Content-Type':'application/x-www-form-urlencoded'},
+      body: form.toString()
+    });
+    if(!resp.ok) throw new Error('save failed');
+    return resp.json();
+  }
+
+  /* --- карта --- */
+  handleWheel(e){e.preventDefault();const r=this.container.getBoundingClientRect();const x=e.clientX-r.left;const y=e.clientY-r.top;const ds=e.deltaY>0?-this.scaleStep:this.scaleStep;this.zoomAtPoint(x,y,ds);}
+  handleMouseDown(e){if(e.button!==0)return;this.isDragging=true;this.lastX=e.clientX;this.lastY=e.clientY;this.container.style.cursor='grabbing';}
+  handleMouseMove(e){if(!this.isDragging)return;const dx=e.clientX-this.lastX,dy=e.clientY-this.lastY;this.translateX+=dx;this.translateY+=dy;this.lastX=e.clientX;this.lastY=e.clientY;this.updateTransform();}
+  handleMouseUp(){this.isDragging=false;this.container.style.cursor='grab';}
+  handleTouchStart(e){e.preventDefault();this.touches=Array.from(e.touches);if(this.touches.length===1){this.isDragging=true;this.lastX=this.touches[0].clientX;this.lastY=this.touches[0].clientY;}else if(this.touches.length===2){this.isDragging=false;this.lastTouchDistance=this.getTouchDistance();}}
+  handleTouchMove(e){e.preventDefault();this.touches=Array.from(e.touches);if(this.touches.length===1&&this.isDragging){const dx=this.touches[0].clientX-this.lastX;const dy=this.touches[0].clientY-this.lastY;this.translateX+=dx;this.translateY+=dy;this.lastX=this.touches[0].clientX;this.lastY=this.touches[0].clientY;this.updateTransform();}else if(this.touches.length===2){const cur=this.getTouchDistance();const dd=cur-this.lastTouchDistance;if(Math.abs(dd)>5){const cx=(this.touches[0].clientX+this.touches[1].clientX)/2;const cy=(this.touches[0].clientY+this.touches[1].clientY)/2;const r=this.container.getBoundingClientRect();const x=cx-r.left;const y=cy-r.top;const ds=dd>0?this.scaleStep:-this.scaleStep;this.zoomAtPoint(x,y,ds);this.lastTouchDistance=cur;}}}
+  handleTouchEnd(e){this.touches=Array.from(e.touches);if(this.touches.length===0)this.isDragging=false;else if(this.touches.length===1){this.isDragging=true;this.lastX=this.touches[0].clientX;this.lastY=this.touches[0].clientY;}}
+  getTouchDistance(){if(this.touches.length<2)return 0;const dx=this.touches[0].clientX-this.touches[1].clientX;const dy=this.touches[0].clientY-this.touches[1].clientY;return Math.hypot(dx,dy);}
+  zoomAtPoint(x,y,ds){const ns=Math.max(this.minScale,Math.min(this.maxScale,this.scale+ds));if(ns!==this.scale){const k=ns/this.scale;this.translateX=x-(x-this.translateX)*k;this.translateY=y-(y-this.translateY)*k;this.scale=ns;this.updateTransform();}}
+  zoomIn(){const r=this.container.getBoundingClientRect();this.zoomAtPoint(r.width/2,r.height/2,this.scaleStep);}
+  zoomOut(){const r=this.container.getBoundingClientRect();this.zoomAtPoint(r.width/2,r.height/2,-this.scaleStep);}
+  resetZoom(){this.scale=1;this.translateX=0;this.translateY=0;this.updateTransform();}
+  updateTransform(){if(!this.svg)return;this.svg.style.transform=`translate(${this.translateX}px, ${this.translateY}px) scale(${this.scale})`;const z=document.getElementById('zoomInfo');if(z)z.textContent=`Масштаб: ${Math.round(this.scale*100)}%`;}
+  updateTooltipPosition(e){let left=e.clientX+15;let top=e.clientY-15;const tr=this.tooltip.getBoundingClientRect();if(left+tr.width>window.innerWidth)left=e.clientX-tr.width-15;if(top+tr.height>window.innerHeight)top=e.clientY-tr.height+15;this.tooltip.style.left=`${left}px`;this.tooltip.style.top=`${top}px`;}
+  hideTooltip(){this.tooltip.classList.remove('show');}
+}
+
+function focusStation(stationId){metroSystem.focusOnStation(stationId);}
+
+let metroSystem;
+document.addEventListener('DOMContentLoaded',function(){
+  metroSystem=new MetroMonitoringSystem('svgMapContainer','{% static "images/map.svg" %}');
+});
+</script>
 {% endblock %}

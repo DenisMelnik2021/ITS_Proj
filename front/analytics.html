@@ -1,0 +1,139 @@
+{% extends 'incidents/base.html' %}
+{% load static %}
+
+{% block title %}Аналитика инцидентов | EscControl{% endblock %}
+
+{% block content %}
+<style>
+  .analytics-header{background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:24px;border-radius:12px;margin-bottom:24px}
+  .metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px}
+  .stats-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:18px;text-align:center}
+  .stats-card .num{font-size:32px;font-weight:800;color:#222}
+  .stats-card .lbl{color:#666;margin-top:6px}
+  .chart-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);padding:16px;min-height:380px}
+  .chart-wrap{position:relative;height:340px}
+  .muted{color:#6c757d}
+  @media(max-width:992px){.metrics{grid-template-columns:1fr}}
+</style>
+
+<div class="analytics-header">
+  <h2 class="mb-1">Аналитика инцидентов</h2>
+  <div class="small">Обновлено: <span id="updatedAt"></span></div>
+  <div class="metrics">
+    <div class="stats-card">
+      <div class="num">{{ total_incidents|default:0 }}</div>
+      <div class="lbl">Всего инцидентов</div>
+    </div>
+    <div class="stats-card">
+      <div class="num">{{ total_stations|default:0 }}</div>
+      <div class="lbl">Станций</div>
+    </div>
+    <div class="stats-card">
+      <div class="num">{{ total_escalators|default:0 }}</div>
+      <div class="lbl">Эскалаторов</div>
+    </div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <h5 class="mb-3">Распределение инцидентов по типам</h5>
+  <div class="chart-wrap">
+    <canvas id="incidentTypePieChart"></canvas>
+  </div>
+  <div id="noDataMsg" class="muted" style="display:none;padding:8px 4px;">Нет данных об инцидентах по типам</div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"
+        integrity="sha512-ElRFoGQ7sG2zZ0C3Cw4m+2S0l0Qm7G9lVuP+gk8F3t7i6m6yTqv7Xc3o6kZq1m2cGx5XwR8tI8vH3rV3GvTQ8w=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<script>
+  // Данные из вьюхи
+  const chartLabels = {{ chart_labels|safe|default:"[]" }};
+  const chartData   = {{ chart_data|safe|default:"[]" }};
+
+  document.getElementById('updatedAt').textContent = new Date().toLocaleString();
+
+  (function initPie(){
+    const canvas = document.getElementById('incidentTypePieChart');
+    const noData = document.getElementById('noDataMsg');
+
+    if (!chartLabels.length || !chartData.length) {
+      canvas.style.display = 'none';
+      noData.style.display = 'block';
+      return;
+    }
+
+    const colors = [
+      '#FF6384','#36A2EB','#FFCE56','#4BC0C0',
+      '#9966FF','#FF9F40','#FF6B6B','#4ECDC4',
+      '#45B7D1','#96CEB4','#FFEAA7','#DDA0DD'
+    ].slice(0, chartLabels.length);
+
+    const ctx = canvas.getContext('2d');
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: chartLabels,
+        datasets: [{
+          label: 'Количество инцидентов',
+          data: chartData,
+          backgroundColor: colors,
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 10
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '50%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              padding: 16,
+              font: { size: 12 },
+              generateLabels: (chart) => {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  const total = data.datasets[0].data.reduce((s,v)=>s+v,0);
+                  return data.labels.map((label, i) => {
+                    const value = data.datasets[0].data[i];
+                    const pct = total ? ((value/total)*100).toFixed(1) : '0.0';
+                    return {
+                      text: `${label}: ${value} (${pct}%)`,
+                      fillStyle: data.datasets[0].backgroundColor[i],
+                      strokeStyle: data.datasets[0].borderColor,
+                      lineWidth: data.datasets[0].borderWidth,
+                      hidden: false,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
+            }
+          },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const total = ctx.dataset.data.reduce((s,v)=>s+v,0);
+                const pct = total ? ((ctx.parsed/total)*100).toFixed(1) : '0.0';
+                return `${ctx.label}: ${ctx.parsed} (${pct}%)`;
+              }
+            }
+          }
+        },
+        animation: {
+          animateRotate: true,
+          animateScale: true,
+          duration: 1200,
+          easing: 'easeOutCubic'
+        }
+      }
+    });
+  })();
+</script>
+{% endblock %}
