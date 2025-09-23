@@ -1,6 +1,19 @@
 from django.shortcuts import render
 from .models import Incident
 from stations.models import Station, Escalator
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+from django.utils.dateparse import parse_datetime
+from .serializers import YoloIncidentReportSerializer
+from .models import Incident
+from django.utils import timezone
+import logging
+
+
+#Frontend
 
 def dashboard(request):
     """Основная страница с информацией"""
@@ -37,19 +50,8 @@ def analytics(request):
     """Страница с аналитическими отчётами"""
     context = {}
     return render(request, 'incidents/analytics.html', context)
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.authentication import TokenAuthentication
-from django.utils.dateparse import parse_datetime
-from .serializers import YoloIncidentReportSerializer
-from .models import Incident
-from django.utils import timezone
-import logging
 
-
-# Create your views here.
+# API
 
 logger = logging.getLogger(__name__)
 class IncidentViewSet(viewsets.GenericViewSet):
