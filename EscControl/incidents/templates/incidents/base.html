@@ -17,10 +17,10 @@
                     </div>
                 </div>
                 <nav class="nav">
-                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Дашборд</a>
-                    <a href="{% url 'stations' %}" class="nav-link {% if request.resolver_match.url_name == 'stations' %}active{% endif %}">Станции</a>
-                    <a href="{% url 'incidents' %}" class="nav-link {% if request.resolver_match.url_name == 'incidents' %}active{% endif %}">Инциденты</a>
-                    <a href="{% url 'analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">Аналитика</a>
+                    <a href="{% url 'incidents_frontend:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Дашборд</a>
+                    <a href="{% url 'incidents_frontend:stations' %}" class="nav-link {% if request.resolver_match.url_name == 'stations' %}active{% endif %}">Станции</a>
+                    <a href="{% url 'incidents_frontend:incidents' %}" class="nav-link {% if request.resolver_match.url_name == 'incidents' %}active{% endif %}">Инциденты</a>
+                    <a href="{% url 'incidents_frontend:analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">Аналитика</a>
                 </nav>
             </div>
         </div>
