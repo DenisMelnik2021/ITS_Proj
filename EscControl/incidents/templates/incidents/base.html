@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EscControl{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div class="logo">
+                        🚇 EscControl
+                    </div>
+                </div>
+                <nav class="nav">
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">Дашборд</a>
+                    <a href="{% url 'stations' %}" class="nav-link {% if request.resolver_match.url_name == 'stations' %}active{% endif %}">Станции</a>
+                    <a href="{% url 'incidents' %}" class="nav-link {% if request.resolver_match.url_name == 'incidents' %}active{% endif %}">Инциденты</a>
+                    <a href="{% url 'analytics' %}" class="nav-link {% if request.resolver_match.url_name == 'analytics' %}active{% endif %}">Аналитика</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</body>
+</html>

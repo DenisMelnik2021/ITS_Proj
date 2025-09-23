@@ -1,0 +1,30 @@
+{% extends 'incidents/base.html' %}
+
+{% block title %}Инциденты | EscControl{% endblock %}
+
+{% block content %}
+<h1>Список инцидентов</h1>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Время</th>
+            <th>Тип инцидента</th>
+            <th>Станция</th>
+            <th>Эскалатор</th>
+            <th>Статус</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for incident in incidents %}
+        <tr>
+            <td>{{ incident.occurred_at|date:'d.m.Y H:i' }}</td>
+            <td>{{ incident.incident_type }}</td>
+            <td>{{ incident.escalator.station }}</td>
+            <td>{{ incident.escalator.number }}</td>
+            <td>{{ incident.get_status_display }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
