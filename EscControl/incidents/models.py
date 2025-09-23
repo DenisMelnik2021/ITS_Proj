@@ -42,11 +42,13 @@ class Incident(models.Model):
     STATUS_NEW = "new"
     STATUS_IN_PROGRESS = "in_progress"
     STATUS_CLOSED = "closed"
+    STATUS_INCORRECT_ORDER = "incorrect_order"
     
     STATUS_CHOICES = [
-        (STATUS_NEW, "новый"),
-        (STATUS_IN_PROGRESS, "в обработке"),
-        (STATUS_CLOSED, "закрыт"),
+        (STATUS_NEW, "Новый"),
+        (STATUS_IN_PROGRESS, "В обработке"),
+        (STATUS_CLOSED, "Закрыт"),
+        (STATUS_INCORRECT_ORDER, "Ложное срабатывание")
     ]
     status = models.CharField(
         choices=STATUS_CHOICES,
